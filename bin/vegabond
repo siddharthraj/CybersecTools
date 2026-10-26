@@ -1,0 +1,683 @@
+#!/usr/bin/env bash
+# omarchy:summary=Personal cybersecurity tool knowledge base
+# omarchy:args=[command]
+# omarchy:examples=vegabond | vegabond add | vegabond stats
+
+set -uo pipefail
+
+VEGABOND_VERSION="1.0.0"
+
+SELF=$(readlink -f -- "${BASH_SOURCE[0]}")
+VEGABOND_ROOT=$(cd -- "$(dirname -- "$SELF")/.." && pwd)
+export SELF VEGABOND_ROOT
+export VEGABOND_DB="${VEGABOND_DB:-$VEGABOND_ROOT/data/tools.db}"
+
+# shellcheck source=../lib/theme.sh
+source "$VEGABOND_ROOT/lib/theme.sh"
+# shellcheck source=../lib/db.sh
+source "$VEGABOND_ROOT/lib/db.sh"
+# shellcheck source=../lib/ui.sh
+source "$VEGABOND_ROOT/lib/ui.sh"
+# shellcheck source=../lib/render.sh
+source "$VEGABOND_ROOT/lib/render.sh"
+# shellcheck source=../lib/forms.sh
+source "$VEGABOND_ROOT/lib/forms.sh"
+# shellcheck source=../lib/browser.sh
+source "$VEGABOND_ROOT/lib/browser.sh"
+
+die() {
+  ui_error "$*"
+  exit 1
+}
+
+usage() {
+  cat <<EOF
+Vegabond — a personal cybersecurity tool knowledge base.
+
+Usage:
+  vegabond                       Open the interactive browser
+  vegabond menu                  Gum menu for the less-used actions
+
+  vegabond add [options]         Add a tool (wizard without options)
+  vegabond edit <id|name>        Edit a tool
+  vegabond rm <id|name> [--yes]  Delete a tool
+  vegabond list [options]        List tools
+  vegabond show <id|name>        Show one tool
+  vegabond search <query>        Search name, description, usage and tags
+  vegabond tags [subcommand]     Manage tags
+  vegabond stats                 Database summary
+  vegabond seed [--force]        Load the starter catalog
+  vegabond export [options]      Export json, csv or markdown
+  vegabond import <file> [opts]  Import a JSON catalog
+  vegabond doctor                Check the environment
+
+Add/edit options:
+  --name NAME            --description TEXT      --tags a,b,c
+  --url URL              --usage TEXT            --usage-file PATH
+
+List options:
+  --tag TAG              --limit N               --json
+
+Search options:
+  --tag TAG              --limit N               --json
+
+Export options:
+  --format json|csv|md   --out FILE
+
+Import options:
+  --on-conflict skip|update|abort
+
+Interactive keys:
+  j/k move · g/G first/last · J/K page · / search · Enter details
+  v full view · e edit · a add · d delete · o open · y copy · q quit
+
+Database: $VEGABOND_DB
+EOF
+}
+
+add_usage() {
+  cat <<'EOF'
+Usage: vegabond add [--name NAME] [--description TEXT] [--tags a,b]
+                         [--url URL] [--usage TEXT | --usage-file PATH]
+
+Without options, opens the interactive wizard.
+EOF
+}
+
+cmd_add() {
+  local name="" description="" tags="" url="" usage="" usage_file="" tags_json id
+
+  while (($# > 0)); do
+    case $1 in
+      --name) name=${2:-}; shift 2 ;;
+      --name=*) name=${1#*=}; shift ;;
+      --description|--desc) description=${2:-}; shift 2 ;;
+      --description=*|--desc=*) description=${1#*=}; shift ;;
+      --tags) tags=${2:-}; shift 2 ;;
+      --tags=*) tags=${1#*=}; shift ;;
+      --url) url=${2:-}; shift 2 ;;
+      --url=*) url=${1#*=}; shift ;;
+      --usage) usage=${2:-}; shift 2 ;;
+      --usage=*) usage=${1#*=}; shift ;;
+      --usage-file) usage_file=${2:-}; shift 2 ;;
+      --usage-file=*) usage_file=${1#*=}; shift ;;
+      -y|--yes) shift ;;
+      -h|--help) add_usage; return 0 ;;
+      *) die "Unknown add option: $1" ;;
+    esac
+  done
+
+  if [[ -n $usage_file ]]; then
+    [[ -f $usage_file ]] || die "No such usage file: $usage_file"
+    usage=$(cat -- "$usage_file")
+  fi
+
+  name=$(trim_line "$name")
+  url=$(trim_line "$url")
+
+  if [[ -z $name ]]; then
+    if is_tty; then
+      forms_add || true
+      return 0
+    fi
+    add_usage >&2
+    die "--name is required outside an interactive terminal"
+  fi
+
+  valid_tool_name "$name" || die "Tool names must be a single non-empty line."
+  db_init || die "Could not initialize the database."
+  db_name_exists "$name" && die "A tool named “$name” already exists."
+
+  tags_json=$(normalize_tags_json "$tags")
+  if ! id=$(db_insert_tool "$name" "$description" "$url" "$usage" "$tags_json"); then
+    die "Could not add “$name”."
+  fi
+  ui_success "Added “$name” (#$id)"
+}
+
+passthrough_opts() {
+  # Prints the current tool as flags, used by the interactive edit picker.
+  local id=$1
+  db_get_tool_json "$id"
+}
+
+cmd_edit() {
+  local target="" name="" description="" tags="" url="" usage="" usage_file=""
+  local have_name=0 have_description=0 have_tags=0 have_url=0 have_usage=0
+
+  while (($# > 0)); do
+    case $1 in
+      --name) name=${2:-}; have_name=1; shift 2 ;;
+      --name=*) name=${1#*=}; have_name=1; shift ;;
+      --description|--desc) description=${2:-}; have_description=1; shift 2 ;;
+      --description=*|--desc=*) description=${1#*=}; have_description=1; shift ;;
+      --tags) tags=${2:-}; have_tags=1; shift 2 ;;
+      --tags=*) tags=${1#*=}; have_tags=1; shift ;;
+      --url) url=${2:-}; have_url=1; shift 2 ;;
+      --url=*) url=${1#*=}; have_url=1; shift ;;
+      --usage) usage=${2:-}; have_usage=1; shift 2 ;;
+      --usage=*) usage=${1#*=}; have_usage=1; shift ;;
+      --usage-file) usage_file=${2:-}; have_usage=1; shift 2 ;;
+      --usage-file=*) usage_file=${1#*=}; have_usage=1; shift ;;
+      -h|--help) usage; return 0 ;;
+      -*) die "Unknown edit option: $1" ;;
+      *) target=$1; shift ;;
+    esac
+  done
+
+  [[ -n $usage_file ]] && usage=$(cat -- "$usage_file")
+  name=$(trim_line "$name")
+  url=$(trim_line "$url")
+  db_init || die "Could not initialize the database."
+
+  if [[ -z $target ]]; then
+    is_tty || die "Give a tool id or name."
+    target=$(cmd_pick_tool "Edit> ") || return 0
+  fi
+
+  local id json
+  id=$(db_resolve_id "$target") || die "Tool not found: $target"
+
+  if ! ((have_name || have_description || have_tags || have_url || have_usage)); then
+    if is_tty; then
+      forms_edit "$id" || true
+      return 0
+    fi
+    die "Give at least one field option (--name, --description, --tags, --url, --usage)."
+  fi
+
+  json=$(db_get_tool_json "$id") || die "Tool not found: $target"
+  ((have_name)) || name=$(jq -r '.name' <<<"$json")
+  ((have_description)) || description=$(jq -r '.description // ""' <<<"$json")
+  ((have_tags)) || tags=$(jq -r '.tags // ""' <<<"$json")
+  ((have_url)) || url=$(jq -r '.url // ""' <<<"$json")
+  ((have_usage)) || usage=$(jq -r '.usage_md // ""' <<<"$json")
+
+  valid_tool_name "$name" || die "The name must be a single non-empty line."
+  if [[ $name != "$(jq -r '.name' <<<"$json")" ]]; then
+    local conflict
+    conflict=$(db_resolve_id "$name" 2>/dev/null || true)
+    [[ -z $conflict || $conflict == "$id" ]] || die "Another tool already uses “$name”."
+  fi
+
+  db_update_tool "$id" "$name" "$description" "$url" "$usage" \
+    "$(normalize_tags_json "$tags")" || die "Could not update “$name”."
+
+  ui_success "Updated “$name”"
+}
+
+cmd_rm() {
+  local target="" yes=0
+  while (($# > 0)); do
+    case $1 in
+      --yes|-y) yes=1; shift ;;
+      -h|--help) printf 'Usage: vegabond rm <id|name> [--yes]\n'; return 0 ;;
+      -*) die "Unknown rm option: $1" ;;
+      *) target=$1; shift ;;
+    esac
+  done
+  [[ -n $target ]] || die "Give a tool id or name."
+  db_init || die "Could not initialize the database."
+  local id name
+  id=$(db_resolve_id "$target") || die "Tool not found: $target"
+  name=$(db_tool_name "$id")
+
+  if ((yes == 0)); then
+    if is_tty; then
+      forms_delete "$id" || return 0
+      return
+    fi
+    die "Refusing to delete outside a terminal without --yes."
+  fi
+
+  db_delete_tool "$id" || die "Could not delete “$name”."
+  ui_success "Deleted “$name”"
+}
+
+cmd_list() {
+  local tag="" limit="" json=0
+  while (($# > 0)); do
+    case $1 in
+      --tag) tag=${2:-}; shift 2 ;;
+      --tag=*) tag=${1#*=}; shift ;;
+      --limit) limit=${2:-}; shift 2 ;;
+      --limit=*) limit=${1#*=}; shift ;;
+      --json) json=1; shift ;;
+      -h|--help) usage; return 0 ;;
+      *) die "Unknown list option: $1" ;;
+    esac
+  done
+  db_init || die "Could not initialize the database."
+  [[ -n $tag ]] && tag=$(normalize_tag_arg "$tag")
+  if ((json)); then
+    db_list_json "$tag" "$limit"
+  else
+    db_list_plain "$tag" "$limit"
+  fi
+}
+
+cmd_show() {
+  local target="" json=0
+  while (($# > 0)); do
+    case $1 in
+      --json) json=1; shift ;;
+      -h|--help) printf 'Usage: vegabond show <id|name> [--json]\n'; return 0 ;;
+      -*) die "Unknown show option: $1" ;;
+      *) target=$1; shift ;;
+    esac
+  done
+  [[ -n $target ]] || die "Give a tool id or name."
+  db_init || die "Could not initialize the database."
+  local id data
+  id=$(db_resolve_id "$target") || die "Tool not found: $target"
+  data=$(db_get_tool_json "$id") || die "Tool not found: $target"
+
+  if ((json)); then
+    printf '%s' "$data" | jq '{
+      name, description, url,
+      usage: .usage_md,
+      tags: (.tags | split(", ") | map(select(length > 0)))
+    }'
+    return
+  fi
+
+  printf 'Name:  %s\n' "$(jq -r '.name' <<<"$data")"
+  printf 'Tags:  %s\n' "$(jq -r 'if .tags == "" then "—" else .tags end' <<<"$data")"
+  printf 'URL:   %s\n' "$(jq -r 'if .url == "" then "—" else .url end' <<<"$data")"
+  printf '\nDescription:\n'
+  printf '%s\n' "$(jq -r '.description // ""' <<<"$data")"
+  local usage
+  usage=$(jq -r '.usage_md // ""' <<<"$data")
+  if [[ -n $usage ]]; then
+    printf '\nUsage:\n'
+    printf '%s\n' "$usage"
+  fi
+}
+
+cmd_search() {
+  local query="" tag="" limit="" json=0
+  while (($# > 0)); do
+    case $1 in
+      --tag) tag=${2:-}; shift 2 ;;
+      --tag=*) tag=${1#*=}; shift ;;
+      --limit) limit=${2:-}; shift 2 ;;
+      --limit=*) limit=${1#*=}; shift ;;
+      --json) json=1; shift ;;
+      -h|--help) printf 'Usage: vegabond search <query> [--tag T] [--json]\n'; return 0 ;;
+      -*) die "Unknown search option: $1" ;;
+      *) if [[ -z $query ]]; then query=$1; else query+=" $1"; fi; shift ;;
+    esac
+  done
+  [[ -n $query ]] || die "Give a search query."
+  db_init || die "Could not initialize the database."
+  [[ -n $tag ]] && tag=$(normalize_tag_arg "$tag")
+  if ((json)); then
+    db_search_json "$query" "$tag" "$limit"
+  else
+    db_search_plain "$query" "$tag" "$limit"
+  fi
+}
+
+cmd_tags() {
+  local action=${1:-list}
+  shift || true
+  db_init || die "Could not initialize the database."
+
+  case $action in
+    list)
+      if is_tty && have gum && [[ $(db_count_tags) != 0 ]]; then
+        {
+          ui_tags_header
+          db_tag_counts | while IFS=$'\t' read -r tag count; do
+            ui_tag_row "$tag" "$count"
+          done
+        } | gum pager --soft-wrap --show-line-numbers=false
+      else
+        db_tag_counts
+      fi
+      ;;
+    rename)
+      [[ $# == 2 ]] || die "Usage: vegabond tags rename OLD NEW"
+      local old new
+      old=$(normalize_tag_arg "$1")
+      new=$(normalize_tag_arg "$2")
+      [[ -n $old && -n $new ]] || die "Invalid tag name."
+      db_tag_exists "$old" || die "No such tag: $old"
+      db_tag_exists "$new" && die "“$new” already exists; use merge instead."
+      db_rename_tag "$old" "$new" || die "Could not rename “$old”."
+      ui_success "Renamed “$old” → “$new”"
+      ;;
+    merge)
+      [[ $# == 2 ]] || die "Usage: vegabond tags merge SOURCE DEST"
+      local src dst
+      src=$(normalize_tag_arg "$1")
+      dst=$(normalize_tag_arg "$2")
+      [[ -n $src && -n $dst ]] || die "Invalid tag name."
+      db_tag_exists "$src" || die "No such tag: $src"
+      db_tag_exists "$dst" || die "No such tag: $dst"
+      [[ $src != "$dst" ]] || die "Choose two different tags."
+      db_merge_tags "$src" "$dst" || die "Could not merge those tags."
+      ui_success "Merged “$src” into “$dst”"
+      ;;
+    rm|delete)
+      [[ $# == 1 ]] || die "Usage: vegabond tags rm TAG"
+      local tag
+      tag=$(normalize_tag_arg "$1")
+      [[ -n $tag ]] || die "Invalid tag name."
+      db_tag_exists "$tag" || die "No such tag: $tag"
+      db_delete_tag "$tag" || die "Could not delete “$tag”."
+      ui_success "Deleted “$tag”"
+      ;;
+    menu|interactive)
+      forms_tags_menu
+      ;;
+    -h|--help)
+      cat <<'EOF'
+Usage:
+  vegabond tags                    List tags with counts
+  vegabond tags rename OLD NEW     Rename a tag
+  vegabond tags merge SRC DST      Merge SRC into DST
+  vegabond tags rm TAG             Delete a tag everywhere
+  vegabond tags menu               Interactive tag manager
+EOF
+      ;;
+    *) die "Unknown tags action: $action" ;;
+  esac
+}
+
+cmd_stats() {
+  local json=0
+  while (($# > 0)); do
+    case $1 in
+      --json) json=1; shift ;;
+      -h|--help) printf 'Usage: vegabond stats [--json]\n'; return 0 ;;
+      *) die "Unknown stats option: $1" ;;
+    esac
+  done
+  db_init || die "Could not initialize the database."
+  local data
+  data=$(db_stats_json)
+
+  if ((json)); then
+    printf '%s' "$data"
+    return
+  fi
+
+  ui_title "Vegabond · ${TH_NAME:-unknown theme}"
+  printf '%-14s %s\n' "Tools" "$(jq -r '.[0].tools' <<<"$data")"
+  printf '%-14s %s\n' "Tags" "$(jq -r '.[0].tags' <<<"$data")"
+  printf '%-14s %s\n' "Tag links" "$(jq -r '.[0].links' <<<"$data")"
+  printf '%-14s %s\n' "Untagged" "$(jq -r '.[0].untagged' <<<"$data")"
+  printf '%-14s %s\n' "Updated 30d" "$(jq -r '.[0].updated_30d' <<<"$data")"
+  printf '\n%s\n' "Top tags:"
+  db_top_tags 10 | awk -F'\t' '{ printf "  %-24s %s\n", $1, $2 }'
+}
+
+cmd_seed() {
+  local force=0
+  [[ ${1:-} == "--force" ]] && force=1
+  db_init || die "Could not initialize the database."
+  local seed="$VEGABOND_ROOT/share/seed.json"
+  [[ -f $seed ]] || die "Starter catalog not found: $seed"
+
+  if [[ $(db_count_tools) != 0 && $force == 0 ]]; then
+    ui_info "The database already has tools; seeding with conflict-skip."
+  fi
+
+  local result rc=0
+  result=$(db_import_json "$seed" skip) || rc=$?
+  ((rc == 0)) || die "Could not load the starter catalog."
+  local total=${result%%:*} before=${result##*:}
+  ui_success "Starter catalog: ${total} records, $((total - before)) new."
+}
+
+cmd_export() {
+  local format="json" out=""
+  while (($# > 0)); do
+    case $1 in
+      --format|-f) format=${2:-}; shift 2 ;;
+      --format=*) format=${1#*=}; shift ;;
+      --out|-o) out=${2:-}; shift 2 ;;
+      --out=*) out=${1#*=}; shift ;;
+      -h|--help) printf 'Usage: vegabond export [--format json|csv|md] [--out FILE]\n'; return 0 ;;
+      *) die "Unknown export option: $1" ;;
+    esac
+  done
+
+  db_init || die "Could not initialize the database."
+  format=${format,,}
+  local body
+  case $format in
+    json) body=$(db_export_json) ;;
+    csv) body=$(db_export_csv) ;;
+    md|markdown) body=$(db_export_markdown) ;;
+    *) die "Unknown export format: $format (json, csv, md)" ;;
+  esac
+
+  if [[ -n $out ]]; then
+    mkdir -p -- "$(dirname -- "$out")"
+    printf '%s\n' "$body" >"$out"
+    ui_success "Exported to $out"
+  else
+    printf '%s\n' "$body"
+  fi
+}
+
+cmd_import() {
+  local file="" mode="skip"
+  while (($# > 0)); do
+    case $1 in
+      --on-conflict) mode=${2:-}; shift 2 ;;
+      --on-conflict=*) mode=${1#*=}; shift ;;
+      -h|--help) printf 'Usage: vegabond import FILE [--on-conflict skip|update|abort]\n'; return 0 ;;
+      -*) die "Unknown import option: $1" ;;
+      *) file=$1; shift ;;
+    esac
+  done
+  [[ -n $file ]] || die "Give a JSON file to import."
+  [[ -f $file ]] || die "No such file: $file"
+  mode=${mode,,}
+  case $mode in skip|update|abort) ;; *) die "--on-conflict must be skip, update or abort." ;; esac
+
+  db_init || die "Could not initialize the database."
+  local result rc=0
+  result=$(db_import_json "$file" "$mode") || rc=$?
+
+  if ((rc == 2)); then
+    die "Import aborted: ${result#conflict:} record(s) already exist."
+  elif ((rc != 0)); then
+    die "Import failed: check the JSON shape and required names."
+  fi
+
+  local total=${result%%:*} before=${result##*:}
+  case $mode in
+    update) ui_success "Imported $total records ($before existing updated)." ;;
+    *) ui_success "Imported $total records ($((total - before)) new, $before existing skipped)." ;;
+  esac
+}
+
+cmd_pick_tool() {
+  local prompt=${1:-"Select> "} line=""
+  require_fzf || return 1
+  local -a args=(
+    --prompt "$prompt" --height=80% --border rounded
+    --header 'enter selects · esc cancels'
+  )
+  if ((${#FZF_THEME_OPTS[@]} > 0)); then
+    args+=("${FZF_THEME_OPTS[@]}")
+  fi
+  line=$(cmd__list_lines | fzf "${args[@]}") || return 1
+  printf '%s' "${line%%$'\t'*}"
+}
+
+cmd_doctor() {
+  local failures=0
+
+  ui_title "Vegabond doctor"
+  ui_kv "Theme" "${TH_NAME:-unknown} (${TH_MODE:-dark})"
+  ui_kv "Accent" "${TH_ACCENT:-—}"
+  ui_kv "Text accent" "${TH_TEXT_ACCENT:-—}"
+  ui_kv "Database" "$VEGABOND_DB"
+
+  if have gum; then
+    ui_kv "gum" "$(gum --version | head -n 1)"
+  else
+    printf '%-14s %s\n' "gum" "MISSING"
+    failures=$((failures + 1))
+  fi
+  if have sqlite3; then
+    ui_kv "sqlite3" "$(sqlite3 --version | awk '{print $1}')"
+  else
+    printf '%-14s %s\n' "sqlite3" "MISSING"
+    failures=$((failures + 1))
+  fi
+  if have jq; then
+    ui_kv "jq" "$(jq --version)"
+  else
+    printf '%-14s %s\n' "jq" "MISSING"
+    failures=$((failures + 1))
+  fi
+  if have fzf; then
+    ui_kv "fzf" "$(fzf --version)"
+  else
+    printf '%-14s %s\n' "fzf" "MISSING (browser disabled)"
+    failures=$((failures + 1))
+  fi
+  ui_kv "wl-copy" "$(have wl-copy && printf present || printf 'not found (copy disabled)')"
+  ui_kv "browser" "$(have omarchy-launch-browser && printf 'omarchy-launch-browser' || printf 'xdg-open')"
+
+  if db_ready; then
+    ui_kv "Schema" "v$(dbq 'PRAGMA user_version;')"
+    ui_kv "Tools" "$(db_count_tools)"
+    ui_kv "Tags" "$(db_count_tags)"
+  else
+    ui_kv "Schema" "not initialized (run any command)"
+  fi
+
+  if ((failures > 0)); then
+    ui_error "$failures required dependency/dependencies missing."
+    return 1
+  fi
+  ui_success "Everything needed is present."
+}
+
+cmd_menu() {
+  require_gum || return 1
+  require_tty || return 1
+  db_init || die "Could not initialize the database."
+
+  local choice file fmt out
+  while true; do
+    choice=$(gum_choose --height 10 --header "Vegabond · ${TH_NAME:-}" \
+      "Browse tools" "Add tool" "Manage tags" "Stats" "Export" "Import" "Doctor" "Quit") || return 0
+    case $choice in
+      "Browse tools") cmd_browse || true ;;
+      "Add tool") forms_add || true ;;
+      "Manage tags") forms_tags_menu || true ;;
+      "Stats") cmd_stats ;;
+      "Export")
+        fmt=$(gum_choose --header "Export format" "json" "csv" "md") || continue
+        mkdir -p "$VEGABOND_ROOT/data/exports"
+        case $fmt in
+          json) out="$VEGABOND_ROOT/data/exports/tools-$(date +%Y%m%d-%H%M%S).json" ;;
+          csv) out="$VEGABOND_ROOT/data/exports/tools-$(date +%Y%m%d-%H%M%S).csv" ;;
+          md) out="$VEGABOND_ROOT/data/exports/tools-$(date +%Y%m%d-%H%M%S).md" ;;
+        esac
+        cmd_export --format "$fmt" --out "$out"
+        ;;
+      "Import")
+        file=$(gum_file --file "$HOME" --header "Pick a JSON catalog") || continue
+        cmd_import "$file" || true
+        ;;
+      "Doctor") cmd_doctor || true ;;
+      Quit|*) return 0 ;;
+    esac
+  done
+}
+
+cmd__list_lines() {
+  db_init || die "Could not initialize the database."
+  local raw width
+  raw=$(db_list_raw)
+  width=$(awk -F'\t' 'BEGIN { w = 24 } { if (length($2) > w) w = length($2) } END { print w }' <<<"$raw")
+  while IFS=$'\t' read -r id name tags; do
+    browser_list_line "$id" "$name" "$tags" "$width"
+  done <<<"$raw"
+}
+cmd__preview() { render_ansi "${1:-}"; }
+cmd__mode() { bash "$VEGABOND_ROOT/lib/fzf-mode.sh" "$@"; }
+cmd__add() { forms_add || true; }
+cmd__edit() { forms_edit "${1:-}" || true; }
+cmd__rm() { forms_delete "${1:-}" || true; }
+
+cmd__open() {
+  local url
+  url=$(db_tool_url "${1:-}") || return 1
+  [[ -n $url ]] || { ui_warn "This tool has no reference URL."; return 1; }
+  open_url "$url" || { ui_warn "Could not open a browser."; return 1; }
+}
+
+cmd__copy_url() {
+  local url
+  url=$(db_tool_url "${1:-}") || return 1
+  [[ -n $url ]] || { ui_warn "This tool has no reference URL."; return 1; }
+  copy_to_clipboard "$url" || ui_warn "No clipboard tool found."
+}
+
+cmd__copy_usage() {
+  local usage
+  usage=$(db_tool_usage "${1:-}") || return 1
+  [[ -n $usage ]] || { ui_warn "This tool has no usage guide."; return 1; }
+  copy_to_clipboard "$usage" || ui_warn "No clipboard tool found."
+}
+
+cmd__view() {
+  local id=${1:-}
+  require_gum || return 1
+  render_markdown "$id" | gum format --type markdown --theme "$(gum_markdown_theme)" | gum pager --soft-wrap --show-line-numbers=false
+}
+
+cmd__help() {
+  require_gum || return 1
+  render_help_markdown | gum format --type markdown --theme "$(gum_markdown_theme)" | gum pager --soft-wrap --show-line-numbers=false
+}
+
+main() {
+  local cmd=${1:-browse}
+  if (($# > 0)); then
+    shift
+  fi
+
+  case $cmd in
+    browse|"") cmd_browse ;;
+    menu) cmd_menu ;;
+    add) cmd_add "$@" ;;
+    edit) cmd_edit "$@" ;;
+    rm|delete) cmd_rm "$@" ;;
+    list|ls) cmd_list "$@" ;;
+    show) cmd_show "$@" ;;
+    search|find) cmd_search "$@" ;;
+    tags|tag) cmd_tags "$@" ;;
+    stats) cmd_stats "$@" ;;
+    seed) cmd_seed "$@" ;;
+    export) cmd_export "$@" ;;
+    import) cmd_import "$@" ;;
+    doctor) cmd_doctor "$@" ;;
+    version|--version|-v) printf 'vegabond %s\n' "$VEGABOND_VERSION" ;;
+    help|-h|--help) usage ;;
+    _list-lines) cmd__list_lines ;;
+    _preview) cmd__preview "$@" ;;
+    _mode) cmd__mode "$@" ;;
+    _add) cmd__add ;;
+    _edit) cmd__edit "$@" ;;
+    _rm) cmd__rm "$@" ;;
+    _open) cmd__open "$@" ;;
+    _copy-url) cmd__copy_url "$@" ;;
+    _copy-usage) cmd__copy_usage "$@" ;;
+    _view) cmd__view "$@" ;;
+    _help) cmd__help ;;
+    *) die "Unknown command: $cmd (try --help)" ;;
+  esac
+}
+
+main "$@"
